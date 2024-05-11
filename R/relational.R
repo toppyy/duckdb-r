@@ -154,8 +154,10 @@ rel_aggregate <- rapi_rel_aggregate
 #' con <- DBI::dbConnect(duckdb())
 #' rel <- rel_from_df(con, mtcars)
 #' rel2 <- rel_order(rel, list(expr_reference("hp")))
-rel_order <- rapi_rel_order
-
+rel_order <- function(rel, orders) {
+  ascending <- rep(FALSE, length(orders))
+  return(rapi_rel_order(rel, orders, ascending))
+}
 #' Get an external pointer pointing to NULL
 #' @return an external pointer pointing to null_ptr.
 #' @noRd

@@ -214,11 +214,17 @@ external_pointer<T> make_external_prot(const string &rclass, SEXP prot, ARGS &&.
 	return make_external_prot<RelationWrapper>("duckdb_relation", prot, res);
 }
 
-[[cpp11::register]] SEXP rapi_rel_order(duckdb::rel_extptr_t rel, list orders) {
+[[cpp11::register]] SEXP rapi_rel_order(duckdb::rel_extptr_t rel, list orders, r_vector<r_bool> ascending) {
 	vector<OrderByNode> res_orders;
 
-	for (expr_extptr_t expr : orders) {
-		res_orders.emplace_back(OrderType::ASCENDING, OrderByNullType::NULLS_LAST, expr->Copy());
+	OrderType order_type;
+
+	for (size_t i = 0; i < orders.size(); i++) {
+		
+		order_type = ascending[i] ? OrderType::ASCENDING : OrderType::DESCENDING;
+		auto expr = ((expr_extptr_t) orders[i]);
+
+		res_orders.emplace_back(order_type, OrderByNullType::NULLS_LAST, expr->Copy());
 	}
 
 	auto res = make_shared_ptr<OrderRelation>(rel->rel, std::move(res_orders));
