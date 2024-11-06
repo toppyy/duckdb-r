@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">duckdb</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.1.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.2.9900</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,6 +31,35 @@
       <small>Source: <a href="https://github.com/duckdb/duckdb-r/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.1.2.9000" id="duckdb-1129000">duckdb 1.1.2.9000<a class="anchor" aria-label="anchor" href="#duckdb-1129000"></a></h2>
+<ul><li>Merge branch ‘cran-1.1.2’.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.1.2" id="duckdb-112">duckdb 1.1.2<a class="anchor" aria-label="anchor" href="#duckdb-112"></a></h2><p class="text-muted">CRAN release: 2024-10-30</p>
+<div class="section level3">
+<h3 id="features-1-1-2">Features<a class="anchor" aria-label="anchor" href="#features-1-1-2"></a></h3>
+<ul><li>Update to duckdb v1.1.2, see <a href="https://github.com/duckdb/duckdb/releases/tag/v1.1.2" class="external-link uri">https://github.com/duckdb/duckdb/releases/tag/v1.1.2</a> for details.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="features-1-1-2-1">Features<a class="anchor" aria-label="anchor" href="#features-1-1-2-1"></a></h3>
+<ul><li><p>Long-running queries can now be canceled immediately with Ctrl + C (terminal) or Escape (RStudio IDE and Workbench) (<a href="https://github.com/duckdb/duckdb-r/issues/514" class="external-link">#514</a>, <a href="https://github.com/duckdb/duckdb-r/issues/515" class="external-link">#515</a>).</p></li>
+<li><p>Add <code>col.types</code> argument to <code><a href="../reference/duckdb_read_csv.html">duckdb_read_csv()</a></code> (<a href="https://github.com/duckdb/duckdb-r/issues/445" class="external-link">#445</a>, <a href="https://github.com/eli-daniels" class="external-link">@eli-daniels</a>).</p></li>
+<li><p>Rethrow errors with rlang if installed (<a href="https://github.com/duckdb/duckdb-r/issues/522" class="external-link">#522</a>).</p></li>
+<li><p>Improve error message for parsing erros during statement extraction (tidyverse/duckplyr#219, <a href="https://github.com/duckdb/duckdb-r/issues/521" class="external-link">#521</a>).</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-1-1-2">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-1-2"></a></h3>
+<ul><li><p>Avoid RStudio IDE crashes when ending session with open objects (<a href="https://github.com/duckdb/duckdb-r/issues/520" class="external-link">#520</a>).</p></li>
+<li><p><code>rfuns</code> extension: <code>%in%</code> works correctly as part of a <code>&amp;</code> conjunction (<a href="https://github.com/duckdb/duckdb-r/issues/528" class="external-link">#528</a>).</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="internal-1-1-2">Internal<a class="anchor" aria-label="anchor" href="#internal-1-1-2"></a></h3>
+<ul><li><p>New interal APIs: <code>rapi_get_last_rel_mat()</code>, <code>rapi_rel_to_altrep(allow_materialization = TRUE)</code>, <code>rapi_rel_from_altrep_df(enable_materialization)</code> (<a href="https://github.com/duckdb/duckdb-r/issues/526" class="external-link">#526</a>).</p></li>
+<li><p>xz-compress duckdb sources in the tarball (<a href="https://github.com/duckdb/duckdb-r/issues/530" class="external-link">#530</a>).</p></li>
+<li><p><code>rfuns</code> extension: Fix signedness.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.1.1" id="duckdb-111">duckdb 1.1.1<a class="anchor" aria-label="anchor" href="#duckdb-111"></a></h2><p class="text-muted">CRAN release: 2024-10-16</p>
 <div class="section level3">
