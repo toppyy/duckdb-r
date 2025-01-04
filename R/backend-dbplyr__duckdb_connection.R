@@ -491,6 +491,27 @@ tbl_query <- function(src, query, ...) {
   tbl_function(src, query, ...)
 }
 
+
+#' Write table into a Parquet file
+#'
+#' @description
+#' `tbl_to_parquet()` writes the table/query results to a parquet-file
+#'
+#'
+#' @param query SQL code, omitting the `FROM` clause
+#' @export
+#' @rdname backend-duckdb
+tbl_to_parquet <- function(query, path, ...) {
+
+  con      <- dbplyr::remote_con(query)
+  sql      <- dbplyr::sql_render(query)
+  cpy_stmt <- dbplyr::build_sql("COPY (", sql, ") TO ", path, " (FORMAT 'PARQUET')", con = con)    
+  q <- dbExecute(con, cpy_stmt)
+  return(cpy_stmt)
+}
+
+
+
 #' Connection object for simulation of the SQL generation without actual database.
 #' dbplyr overrides database specific identifier and string quotes
 #'
