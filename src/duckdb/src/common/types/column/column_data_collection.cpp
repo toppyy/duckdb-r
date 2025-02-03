@@ -1194,6 +1194,13 @@ ColumnDataAllocatorType ColumnDataCollection::GetAllocatorType() const {
 	return allocator->GetType();
 }
 
+void ColumnDataCollection::FreeSegment(idx_t segment_idx) {
+	// if (segment_idx >= (segments.size() - 1)) {
+		segments.erase(segments.begin() + segment_idx);
+	// }
+	// allocator = make_shared_ptr<ColumnDataAllocator>(*allocator);
+}
+
 const vector<unique_ptr<ColumnDataCollectionSegment>> &ColumnDataCollection::GetSegments() const {
 	return segments;
 }

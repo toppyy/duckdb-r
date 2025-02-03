@@ -6,8 +6,22 @@
 
 namespace duckdb {
 
-struct AltrepVectorWrapper;
+struct AltrepRelationWrapper;
 
+struct AltrepVectorWrapper {
+	AltrepVectorWrapper(duckdb::shared_ptr<AltrepRelationWrapper> rel_p, idx_t column_index_p);
+
+	static AltrepVectorWrapper *Get(SEXP x);
+
+	void *Dataptr();
+
+	SEXP Vector();
+
+	duckdb::shared_ptr<AltrepRelationWrapper> rel;
+	idx_t column_index;
+	cpp11::sexp transformed_vector;
+	idx_t dest_offset;
+};
 
 struct AltrepRelationWrapper {
 	static AltrepRelationWrapper *Get(SEXP x);

@@ -214,79 +214,75 @@ struct AltrepRownamesWrapper {
 	bool rowlen_data_retrieved;
 };
 
-struct AltrepVectorWrapper {
-	AltrepVectorWrapper(duckdb::shared_ptr<AltrepRelationWrapper> rel_p, idx_t column_index_p)
-	    : rel(rel_p), column_index(column_index_p) {
-	}
 
-	static AltrepVectorWrapper *Get(SEXP x) {
-		return GetFromExternalPtr<AltrepVectorWrapper>(x);
-	}
+AltrepVectorWrapper::AltrepVectorWrapper(duckdb::shared_ptr<AltrepRelationWrapper> rel_p, idx_t column_index_p)
+	: rel(rel_p), column_index(column_index_p), dest_offset(0) {
+}
 
-	void *Dataptr() {
-		if (transformed_vector.data() == R_NilValue) {
-			printf("transformed_vector.data() == R_NilValue\n");
-			auto res = rel->GetQueryResult();
+static AltrepVectorWrapper *Get(SEXP x) {
+	return GetFromExternalPtr<AltrepVectorWrapper>(x);
+}
 
-			// Allocate all vectors
-			for (size_t i = 0; i < rel->ncols; i++) {
-				rel->vector_wrappers[i]->transformed_vector = duckdb_r_allocate(res->types[i], res->RowCount());
-			}
+void *AltrepVectorWrapper::Dataptr() {
+	if (transformed_vector.data() == R_NilValue) {
+		printf("transformed_vector.data() == R_NilValue\n");
+		auto res = rel->GetQueryResult();
 
-			/*
-			For segment in collection
-				For chunk in segment
-					For col in chunk
-						Transform chunk
-				Free segment
-			*/
-			ColumnDataScanState temp_scan_state;
-			res->Collection().InitializeScan(temp_scan_state);
-
-			idx_t segment_idx = 0;
-
-			while (true) {
-				auto chunk = make_uniq<DataChunk>();
-				res->Collection().InitializeScanChunk(*chunk);
-				if (!res->Collection().Scan(temp_scan_state, *chunk)) {
-					break;
-				}
-
-
-				for (size_t i = 0; i < rel->ncols; i++) {
-					SEXP dest = rel->vector_wrappers[i]->transformed_vector.data();
-					duckdb_r_transform(chunk->data[i], dest, rel->vector_wrappers[i]->dest_offset, chunk->size(), false);
-					rel->vector_wrappers[i]->dest_offset += chunk->size();
-				}
-
-				if (temp_scan_state.segment_index > segment_idx) {
-					res->Collection().FreeSegment(segment_idx);
-					temp_scan_state.segment_index--;
-				}
-
-				if (temp_scan_state.segment_index < 0) {
-					break;
-				}
-			}
-
-			// Frees the last segment and re-creates allocator
-			rel->res.reset();
-
-			// mark that all the columns have been transformed
-			rel->cols_transformed = rel->ncols;
+		// Allocate all vectors
+		for (size_t i = 0; i < rel->ncols; i++) {
+			rel->vector_wrappers[i]->transformed_vector = duckdb_r_allocate(res->types[i], res->RowCount());
 		}
-		return DATAPTR(transformed_vector);
-	}
 
-	SEXP Vector() {
-		Dataptr();
-		return transformed_vector;
-	}
+		/*
+		For segment in collection
+			For chunk in segment
+				For col in chunk
+					Transform chunk
+			Free segment
+		*/
+		ColumnDataScanState temp_scan_state;
+		res->Collection().InitializeScan(temp_scan_state);
 
-	duckdb::shared_ptr<AltrepRelationWrapper> rel;
-	idx_t column_index;
-	cpp11::sexp transformed_vector;
-};
+		idx_t segment_idx = 0;
+
+		while (true) {
+			auto chunk = make_uniq<DataChunk>();
+			res->Collection().InitializeScanChunk(*chunk);
+			if (!res->Collection().Scan(temp_scan_state, *chunk)) {
+				break;
+			}
+
+
+			for (size_t i = 0; i < rel->ncols; i++) {
+				SEXP dest = rel->vector_wrappers[i]->transformed_vector.data();
+				duckdb_r_transform(chunk->data[i], dest, rel->vector_wrappers[i]->dest_offset, chunk->size(), false);
+				rel->vector_wrappers[i]->dest_offset += chunk->size();
+			}
+
+			if (temp_scan_state.segment_index > segment_idx) {
+				res->Collection().FreeSegment(segment_idx);
+				temp_scan_state.segment_index--;
+			}
+
+			if (temp_scan_state.segment_index < 0) {
+				break;
+			}
+		}
+
+		// Frees the last segment and re-creates allocator
+		rel->res.reset();
+
+		// mark that all the columns have been transformed
+		rel->cols_transformed = rel->ncols;
+	}
+	return DATAPTR(transformed_vector);
+}
+
+SEXP AltrepVectorWrapper::Vector() {
+	Dataptr();
+	return transformed_vector;
+}
+
 
 Rboolean RelToAltrep::RownamesInspect(SEXP x, int pre, int deep, int pvec,
                                       void (*inspect_subtree)(SEXP, int, int, int)) {

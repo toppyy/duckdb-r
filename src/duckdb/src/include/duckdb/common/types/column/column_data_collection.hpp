@@ -162,6 +162,9 @@ public:
 	//! Get the allocator type of this ColumnDataCollection
 	ColumnDataAllocatorType GetAllocatorType() const;
 
+
+	void FreeSegment(idx_t segment_idx);
+
 	//! Get a vector of the segments in this ColumnDataCollection
 	const vector<unique_ptr<ColumnDataCollectionSegment>> &GetSegments() const;
 
