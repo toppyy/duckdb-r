@@ -100,6 +100,7 @@ AltrepRelationWrapper *AltrepRelationWrapper::Get(SEXP x) {
 	return GetFromExternalPtr<AltrepRelationWrapper>(x);
 }
 
+
 AltrepRelationWrapper::AltrepRelationWrapper(rel_extptr_t rel_, bool allow_materialization_, size_t n_rows_, size_t n_cells_)
     	    : allow_materialization(allow_materialization_), n_rows(n_rows_), n_cells(n_cells_), rel_eptr(rel_), rel(rel_->rel), rowcount(0), rowcount_retrieved(false), ncols(0), cols_transformed(0) {
 }
@@ -227,24 +228,52 @@ struct AltrepVectorWrapper {
 			printf("transformed_vector.data() == R_NilValue\n");
 			auto res = rel->GetQueryResult();
 
-			transformed_vector = duckdb_r_allocate(res->types[column_index], res->RowCount());
-			idx_t dest_offset = 0;
-			for (auto &chunk : res->Collection().Chunks()) {
-				SEXP dest = transformed_vector.data();
-				duckdb_r_transform(chunk.data[column_index], dest, dest_offset, chunk.size(), false);
-				dest_offset += chunk.size();
+			// Allocate all vectors
+			for (size_t i = 0; i < rel->ncols; i++) {
+				rel->vector_wrappers[i]->transformed_vector = duckdb_r_allocate(res->types[i], res->RowCount());
 			}
-			// keep tabs on how many of the columns have been transformed
-			// to their R-representation
-			rel->cols_transformed++;
-			// if all of the columns have been transformed, we can reset
-			// the query-result pointer and free the memory
-			if (rel->cols_transformed == rel->ncols) {
-				printf("Resetting query results\n");
-				rel->res.reset();
-			} else {
-				printf("cols_transformed: %ld vs. ncols %ld\n", rel->cols_transformed, rel->ncols);
+
+			/*
+			For segment in collection
+				For chunk in segment
+					For col in chunk
+						Transform chunk
+				Free segment
+			*/
+			ColumnDataScanState temp_scan_state;
+			res->Collection().InitializeScan(temp_scan_state);
+
+			idx_t segment_idx = 0;
+
+			while (true) {
+				auto chunk = make_uniq<DataChunk>();
+				res->Collection().InitializeScanChunk(*chunk);
+				if (!res->Collection().Scan(temp_scan_state, *chunk)) {
+					break;
+				}
+
+
+				for (size_t i = 0; i < rel->ncols; i++) {
+					SEXP dest = rel->vector_wrappers[i]->transformed_vector.data();
+					duckdb_r_transform(chunk->data[i], dest, rel->vector_wrappers[i]->dest_offset, chunk->size(), false);
+					rel->vector_wrappers[i]->dest_offset += chunk->size();
+				}
+
+				if (temp_scan_state.segment_index > segment_idx) {
+					res->Collection().FreeSegment(segment_idx);
+					temp_scan_state.segment_index--;
+				}
+
+				if (temp_scan_state.segment_index < 0) {
+					break;
+				}
 			}
+
+			// Frees the last segment and re-creates allocator
+			rel->res.reset();
+
+			// mark that all the columns have been transformed
+			rel->cols_transformed = rel->ncols;
 		}
 		return DATAPTR(transformed_vector);
 	}
@@ -440,6 +469,8 @@ size_t DoubleToSize(double d) {
 		auto &column_type = drel->Columns()[col_idx].Type();
 		cpp11::external_pointer<AltrepVectorWrapper> ptr(new AltrepVectorWrapper(relation_wrapper, col_idx));
 		R_SetExternalPtrTag(ptr, RStrings::get().duckdb_vector_sym);
+
+		relation_wrapper->vector_wrappers.push_back(ptr);
 
 		cpp11::sexp vector_sexp = R_new_altrep(LogicalTypeToAltrepType(column_type), ptr, rel);
 		duckdb_r_decorate(column_type, vector_sexp, false);

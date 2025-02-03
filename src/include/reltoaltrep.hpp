@@ -6,6 +6,9 @@
 
 namespace duckdb {
 
+struct AltrepVectorWrapper;
+
+
 struct AltrepRelationWrapper {
 	static AltrepRelationWrapper *Get(SEXP x);
 
@@ -30,6 +33,8 @@ struct AltrepRelationWrapper {
 
 	size_t ncols;
 	size_t cols_transformed;
+
+	duckdb::vector<cpp11::external_pointer<AltrepVectorWrapper>> vector_wrappers;
 
 };
 
