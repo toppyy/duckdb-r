@@ -219,7 +219,7 @@ AltrepVectorWrapper::AltrepVectorWrapper(duckdb::shared_ptr<AltrepRelationWrappe
 	: rel(rel_p), column_index(column_index_p), dest_offset(0) {
 }
 
-static AltrepVectorWrapper *Get(SEXP x) {
+AltrepVectorWrapper *AltrepVectorWrapper::Get(SEXP x) {
 	return GetFromExternalPtr<AltrepVectorWrapper>(x);
 }
 
