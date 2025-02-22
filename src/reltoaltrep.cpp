@@ -119,6 +119,28 @@ void AltrepRelationWrapper::MarkColumnAsTransformed() {
 	}
 }
 
+void AltrepRelationWrapper::TransformColumns() {
+
+	auto matres = GetQueryResult();
+	// Allocate all vectors
+	for (size_t i = 0; i < ncols; i++) {
+		vector_wrappers[i]->transformed_vector = duckdb_r_allocate(matres->types[i], matres->RowCount());
+	}
+
+	// For each chunk in result
+	//		For each column in relation
+	//			Transform chunk data
+	auto chunk = make_uniq<DataChunk>();
+	while ((chunk = matres->Fetch()) != nullptr) {
+		for (size_t i = 0; i < ncols; i++) {
+			SEXP dest = vector_wrappers[i]->transformed_vector.data();
+			duckdb_r_transform(chunk->data[i], dest, vector_wrappers[i]->dest_offset, chunk->size(), false);
+			vector_wrappers[i]->dest_offset += chunk->size();
+		}
+	}
+
+}
+
 MaterializedQueryResult *AltrepRelationWrapper::GetQueryResult() {
 	if (!res) {
 		if (!allow_materialization || n_cells == 0) {
@@ -224,41 +246,27 @@ struct AltrepRownamesWrapper {
 	bool rowlen_data_retrieved;
 };
 
-struct AltrepVectorWrapper {
-	AltrepVectorWrapper(duckdb::shared_ptr<AltrepRelationWrapper> rel_p, idx_t column_index_p)
-	    : rel(rel_p), column_index(column_index_p) {
-	}
 
-	static AltrepVectorWrapper *Get(SEXP x) {
-		return GetFromExternalPtr<AltrepVectorWrapper>(x);
-	}
+AltrepVectorWrapper::AltrepVectorWrapper(duckdb::shared_ptr<AltrepRelationWrapper> rel_p, idx_t column_index_p)
+	: rel(rel_p), column_index(column_index_p), dest_offset(0) {
+}
 
-	void *Dataptr() {
+AltrepVectorWrapper *AltrepVectorWrapper::Get(SEXP x) {
+	return GetFromExternalPtr<AltrepVectorWrapper>(x);
+}
+
+void *AltrepVectorWrapper::Dataptr() {
 		if (transformed_vector.data() == R_NilValue) {
-			auto res = rel->GetQueryResult();
-
-			transformed_vector = duckdb_r_allocate(res->types[column_index], res->RowCount());
-			idx_t dest_offset = 0;
-			for (auto &chunk : res->Collection().Chunks()) {
-				SEXP dest = transformed_vector.data();
-				duckdb_r_transform(chunk.data[column_index], dest, dest_offset, chunk.size(), false);
-				dest_offset += chunk.size();
-			}
-
-			rel->MarkColumnAsTransformed();
+			rel->TransformColumns();
 		}
 		return DATAPTR(transformed_vector);
-	}
+}
 
-	SEXP Vector() {
-		Dataptr();
-		return transformed_vector;
-	}
+SEXP AltrepVectorWrapper::Vector() {
+	Dataptr();
+	return transformed_vector;
+}
 
-	duckdb::shared_ptr<AltrepRelationWrapper> rel;
-	idx_t column_index;
-	cpp11::sexp transformed_vector;
-};
 
 Rboolean RelToAltrep::RownamesInspect(SEXP x, int pre, int deep, int pvec,
                                       void (*inspect_subtree)(SEXP, int, int, int)) {
@@ -443,6 +451,8 @@ size_t DoubleToSize(double d) {
 		cpp11::external_pointer<AltrepVectorWrapper> ptr(new AltrepVectorWrapper(relation_wrapper, col_idx));
 		R_SetExternalPtrTag(ptr, RStrings::get().duckdb_vector_sym);
 
+		relation_wrapper->vector_wrappers.push_back(ptr);
+
 		cpp11::sexp vector_sexp = R_new_altrep(LogicalTypeToAltrepType(column_type), ptr, rel);
 		duckdb_r_decorate(column_type, vector_sexp, false);
 		data_frame.push_back(vector_sexp);
@@ -459,7 +469,6 @@ size_t DoubleToSize(double d) {
 	SET_NAMES(data_frame, StringsToSexp(names));
 
 	relation_wrapper->ncols = drel->Columns().size();
-
 	// Row names
 	cpp11::external_pointer<AltrepRownamesWrapper> ptr(new AltrepRownamesWrapper(relation_wrapper));
 	R_SetExternalPtrTag(ptr, RStrings::get().duckdb_row_names_sym);

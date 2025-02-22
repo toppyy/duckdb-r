@@ -6,6 +6,23 @@
 
 namespace duckdb {
 
+struct AltrepRelationWrapper;
+
+struct AltrepVectorWrapper {
+	AltrepVectorWrapper(duckdb::shared_ptr<AltrepRelationWrapper> rel_p, idx_t column_index_p);
+
+	static AltrepVectorWrapper *Get(SEXP x);
+
+	void *Dataptr();
+
+	SEXP Vector();
+
+	duckdb::shared_ptr<AltrepRelationWrapper> rel;
+	idx_t column_index;
+	cpp11::sexp transformed_vector;
+	idx_t dest_offset;
+};
+
 struct AltrepRelationWrapper {
 	static AltrepRelationWrapper *Get(SEXP x);
 
@@ -18,6 +35,7 @@ struct AltrepRelationWrapper {
 	duckdb::unique_ptr<QueryResult> Materialize();
 
 	void MarkColumnAsTransformed();
+	void TransformColumns();
 
 	const bool allow_materialization;
 	const size_t n_rows;
@@ -32,6 +50,8 @@ struct AltrepRelationWrapper {
 
 	size_t ncols;
 	size_t cols_transformed;
+
+	duckdb::vector<cpp11::external_pointer<AltrepVectorWrapper>> vector_wrappers;
 
 };
 
