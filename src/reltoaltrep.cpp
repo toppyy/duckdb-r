@@ -108,16 +108,6 @@ bool AltrepRelationWrapper::HasQueryResult() const {
 	return (bool)res;
 }
 
-void AltrepRelationWrapper::MarkColumnAsTransformed() {
-	// AltrepRelationWrapper keeps tabs on how many of the columns have been transformed
-	// to their R-representation
-	cols_transformed++;
-	// If all of the columns have been transformed, we can reset
-	// the query-result pointer and free the memory
-	if (cols_transformed == ncols) {
-		res.reset();
-	}
-}
 
 void AltrepRelationWrapper::TransformColumns() {
 
@@ -130,13 +120,27 @@ void AltrepRelationWrapper::TransformColumns() {
 	// For each chunk in result
 	//		For each column in relation
 	//			Transform chunk data
+
 	auto chunk = make_uniq<DataChunk>();
-	while ((chunk = matres->Fetch()) != nullptr) {
+	matres->Collection().InitializeScanChunk(*chunk);
+
+	ColumnDataScanState scan_state;
+	matres->Collection().InitializeScan(scan_state);
+
+
+	while (true) {
+
+		matres->Collection().Scan(scan_state, *chunk);
+		if (chunk->size() == 0) {
+			break;
+		}
+
 		for (size_t i = 0; i < ncols; i++) {
 			SEXP dest = vector_wrappers[i]->transformed_vector.data();
 			duckdb_r_transform(chunk->data[i], dest, vector_wrappers[i]->dest_offset, chunk->size(), false);
 			vector_wrappers[i]->dest_offset += chunk->size();
 		}
+
 	}
 
 }

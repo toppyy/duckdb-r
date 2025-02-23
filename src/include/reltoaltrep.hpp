@@ -34,7 +34,6 @@ struct AltrepRelationWrapper {
 
 	duckdb::unique_ptr<QueryResult> Materialize();
 
-	void MarkColumnAsTransformed();
 	void TransformColumns();
 
 	const bool allow_materialization;
