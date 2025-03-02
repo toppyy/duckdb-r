@@ -12,10 +12,13 @@ struct AltrepRelationWrapper {
 	AltrepRelationWrapper(rel_extptr_t rel_, bool allow_materialization_, size_t n_rows_, size_t n_cells_);
 
 	bool HasQueryResult() const;
+	R_xlen_t RowCount();
 
 	MaterializedQueryResult *GetQueryResult();
 
 	duckdb::unique_ptr<QueryResult> Materialize();
+
+	
 
 	const bool allow_materialization;
 	const size_t n_rows;
@@ -24,6 +27,10 @@ struct AltrepRelationWrapper {
 	rel_extptr_t rel_eptr;
 	duckdb::shared_ptr<Relation> rel;
 	duckdb::unique_ptr<QueryResult> res;
+
+	size_t rowcount;
+
+	duckdb::vector<duckdb::vector<duckdb::unique_ptr<DataChunk>>> chunks;
 };
 
 }
@@ -41,6 +48,8 @@ struct RelToAltrep {
 	static Rboolean RelInspect(SEXP x, int pre, int deep, int pvec, void (*inspect_subtree)(SEXP, int, int, int));
 
 	static SEXP VectorStringElt(SEXP x, R_xlen_t i);
+
+	;
 
 	static R_altrep_class_t rownames_class;
 	static R_altrep_class_t logical_class;

@@ -101,12 +101,18 @@ AltrepRelationWrapper *AltrepRelationWrapper::Get(SEXP x) {
 }
 
 AltrepRelationWrapper::AltrepRelationWrapper(rel_extptr_t rel_, bool allow_materialization_, size_t n_rows_, size_t n_cells_)
-    : allow_materialization(allow_materialization_), n_rows(n_rows_), n_cells(n_cells_), rel_eptr(rel_), rel(rel_->rel) {
+    : allow_materialization(allow_materialization_), n_rows(n_rows_), n_cells(n_cells_), rel_eptr(rel_), rel(rel_->rel), rowcount(0) {
 }
 
 bool AltrepRelationWrapper::HasQueryResult() const {
 	return (bool)res;
 }
+
+R_xlen_t AltrepRelationWrapper::RowCount() {
+	GetQueryResult();
+	return rowcount;
+}
+
 
 MaterializedQueryResult *AltrepRelationWrapper::GetQueryResult() {
 	if (!res) {
@@ -170,12 +176,25 @@ duckdb::unique_ptr<QueryResult> AltrepRelationWrapper::Materialize() {
 	}
 
 	// For tethered, we push a limit relation and check the number of output rows
-	auto local_rel = rel;
-	if (max_rows < MAX_SIZE_T) {
-		local_rel = make_shared_ptr<LimitRelation>(rel, max_rows + 1, 0);
-	}
+	auto pending_local_res = rel->context->GetContext()->PendingQuery(rel, true);
+	auto local_res = pending_local_res->Execute();
 
-	auto local_res = local_rel->Execute();
+	// Step through the result and collect the chunks
+	auto chunk = make_uniq<DataChunk>();
+
+	auto ncols = rel->Columns().size();
+	chunks.resize(ncols);
+
+	rowcount = 0;
+	while ((chunk = local_res->Fetch()) != nullptr) {
+		rowcount += chunk->size();
+		// Split columnwise
+		for (int ci = (ncols-1); ci >= 0; ci--) {
+			auto other_chunk = make_uniq<DataChunk>();
+			chunk->Split(*other_chunk, chunk->ColumnCount() -1);
+			chunks[ci].push_back(std::move(other_chunk));
+		}
+	}
 
 	if (local_res->HasError()) {
 		cpp11::stop("Error evaluating duckdb query: %s", local_res->GetError().c_str());
@@ -219,15 +238,19 @@ struct AltrepVectorWrapper {
 
 	void *Dataptr() {
 		if (transformed_vector.data() == R_NilValue) {
-			auto res = rel->GetQueryResult();
 
-			transformed_vector = duckdb_r_allocate(res->types[column_index], res->RowCount());
+			transformed_vector = duckdb_r_allocate(rel->GetQueryResult()->types[column_index], rel->rowcount);
 			idx_t dest_offset = 0;
-			for (auto &chunk : res->Collection().Chunks()) {
+
+			auto& col_chunks = rel->chunks[column_index];
+
+			for (auto &chunk : col_chunks) {
 				SEXP dest = transformed_vector.data();
-				duckdb_r_transform(chunk.data[column_index], dest, dest_offset, chunk.size(), false);
-				dest_offset += chunk.size();
+				duckdb_r_transform(chunk->data[0], dest, dest_offset, chunk->size(), false);
+				dest_offset += chunk->size();
+				chunk.reset();
 			}
+			col_chunks.clear();
 		}
 		return DATAPTR(transformed_vector);
 	}
@@ -306,7 +329,7 @@ const void *RelToAltrep::RownamesDataptrOrNull(SEXP x) {
 
 void *RelToAltrep::DoRownamesDataptrGet(SEXP x) {
 	auto rownames_wrapper = AltrepRownamesWrapper::Get(x);
-	auto row_count = rownames_wrapper->rel->GetQueryResult()->RowCount();
+	auto row_count = rownames_wrapper->rel->RowCount();
 	if (row_count > (idx_t)NumericLimits<int32_t>::Maximum()) {
 		cpp11::stop("Integer overflow for row.names attribute");
 	}
@@ -316,7 +339,7 @@ void *RelToAltrep::DoRownamesDataptrGet(SEXP x) {
 
 R_xlen_t RelToAltrep::VectorLength(SEXP x) {
 	BEGIN_CPP11
-	return AltrepVectorWrapper::Get(x)->rel->GetQueryResult()->RowCount();
+	return AltrepVectorWrapper::Get(x)->rel->RowCount();
 	END_CPP11_EX(0)
 }
 
