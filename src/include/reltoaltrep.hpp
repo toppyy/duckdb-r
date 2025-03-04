@@ -14,9 +14,9 @@ struct AltrepRelationWrapper {
 	bool HasQueryResult() const;
 	R_xlen_t RowCount();
 
-	MaterializedQueryResult *GetQueryResult();
+	void GetQueryResult();
 
-	duckdb::unique_ptr<QueryResult> Materialize();
+	void Materialize();
 
 	
 
@@ -26,10 +26,11 @@ struct AltrepRelationWrapper {
 
 	rel_extptr_t rel_eptr;
 	duckdb::shared_ptr<Relation> rel;
-	duckdb::unique_ptr<QueryResult> res;
 
 	size_t rowcount;
+	bool materialized;
 
+	vector<LogicalType> types;
 	duckdb::vector<duckdb::vector<duckdb::unique_ptr<DataChunk>>> chunks;
 };
 
