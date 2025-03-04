@@ -176,7 +176,12 @@ duckdb::unique_ptr<QueryResult> AltrepRelationWrapper::Materialize() {
 	}
 
 	// For tethered, we push a limit relation and check the number of output rows
-	auto pending_local_res = rel->context->GetContext()->PendingQuery(rel, true);
+	auto local_rel = rel;
+	if (max_rows < MAX_SIZE_T) {
+		local_rel = make_shared_ptr<LimitRelation>(rel, max_rows + 1, 0);
+	}
+
+	auto pending_local_res = local_rel->context->GetContext()->PendingQuery(local_rel, true);
 	auto local_res = pending_local_res->Execute();
 
 	// Step through the result and collect the chunks
