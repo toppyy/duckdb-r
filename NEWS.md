@@ -1,14 +1,195 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
-# duckdb 1.4.3.9000
+# duckdb 1.5.2.9003
 
-## vendor
+## Chore
 
-- Update vendored sources to duckdb/duckdb@e92f41065ffbb8039282fd2397c542db71720a76 (#1823).
+- Auto-update from GitHub Actions.
+
+  Run: https://github.com/krlmlr/duckdb-r/actions/runs/25267064493
+
+## Continuous integration
+
+- Align.
+
+- Cosmetics.
+
+- Bump action versions.
+
+- Install clang-format-21.
+
+- Align fledge workflow.
+
+- Harmonize.
+
+## Uncategorized
+
+- Refine RCC smoke-fix workflow: per-commit validation and push (#25).
+
+- Merge branch 'main' into krlmlr-main.
+
+
+# duckdb 1.5.2.9002
+
+## Chore
+
+- Auto-update from GitHub Actions (#2319).
+
+- Next skill iteration.
+
+- Fetch logs from orphan branch.
+
+## Continuous integration
+
+- Success message.
+
+- Fetch all.
+
+- Refine.
+
+- Tweak skill.
+
+- 4x per day.
+
+- Trigger.
+
+- Refine.
+
+- On push.
+
+## Uncategorized
+
+- Add workflow to cancel pending RCC dispatch runs (#24).
+
+
+# duckdb 1.5.2.9001
+
+- Add RCC smoke test fix skill documentation (#22).
+
+- Docs(skill): add rcc-smoke-fix skill modeled on rigraph.
+
+- Iterate over multiple \*-dev branches (main-dev, v1.5-variegata-dev,.
+
+- Forbid edits to vendored sources (src/duckdb/, inst/include/cpp11/,.
+
+- Document longer build times (10-15 min cold) and the .dd.
+
+- Include the same operation-essence preamble, no-log-access caveat,.
+
+- Docs(skill): correct claim about CI promoting fixes to \*-dev.
+
+- Docs(skill): address review feedback on rcc-smoke-fix.
+
+- Replace placeholder status-lookup pseudocode with a concrete.
+
+- Enable `set -o pipefail` around `... | tail -N` so failing.
+
+- Use `rcmdcheck::rcmdcheck()` instead of `R CMD check .` (which is.
+
+- Build-ignore.
+
+- Fix: remove all R CMD check . references from skill.
+
+- Docs(skill): spell out patch/ → vendored cascade; drop transient branches.
+
+- Note that editing `patch/` is expected to produce committable changes.
+
+- Apply-patch instruction added to priority 1.
+
+- Commit step conditionally adds `src/duckdb/` only when `patch/` changed.
+
+- Cherry-pick conflict on `src/duckdb/` softened: rare but possible from.
+
+- Removed all references to out-of-scope transient branches.
+
+
+# duckdb 1.5.2.9000
 
 ## fledge
 
-- CRAN release v1.4.3 (#1822).
+- CRAN release v1.5.2 (#2312).
+
+
+# duckdb 1.5.2
+
+## Bug fixes
+
+- Update to DuckDB v1.5.2, see <https://github.com/duckdb/duckdb/releases/tag/v1.5.2> for details.
+
+- Fix compiler warning on recent clang on macOS.
+
+## Features
+
+- Use `TRY_CAST()` instead of `CAST()` in dplyr SQL translation for type conversion functions (#2230, #2231).
+
+## Chore
+
+- Use `R_getRegisteredNamespace()` in R 4.6.
+
+## Documentation
+
+- Describe branching strategy (#2280, #2281).
+
+## Testing
+
+- Use explicit default duckdb connection for arrow tests (#2301).
+
+- Rework arrow tests, prepare for compatibility with dbplyr 2.6.0 (#2300).
+
+
+# duckdb 1.5.1
+
+## Bug fixes
+
+- Update to DuckDB v1.5.1, see <https://github.com/duckdb/duckdb/releases/tag/v1.5.1> for details.
+
+## Features
+
+- `GEOMETRY` columns can be returned, either as BLOBs (default) or as wk objects (via the wk package) using `dbConnect(geometry = "wk")` (#2278, #2279).
+
+## Chore
+
+- Fix `-Wdeprecated` compiler warnings (#2295, #2296) and protection buglet (#2294).
+
+- Use `gtar` when available to suppress Apple extended attribute warnings on Linux (#2227, #2228).
+
+
+# duckdb 1.5.0
+
+## Features
+
+- Update to DuckDB v1.5.0, see <https://github.com/duckdb/duckdb/releases/tag/v1.5.0> for details.
+
+- Support `descending` and `nulls_first` in `expr_window()` and `rel_order()` (#2074, #2075).
+
+## Bug fixes
+
+- The dbplyr translation of `as.numeric()` and `as.double()` uses `DOUBLE` instead of `NUMERIC` (#2023, #2031).
+
+## Testing
+
+- Update to testthat edition 3.
+
+## Internal
+
+- Avoid `ATTRIB()` for compatibility with R 4.6, materialize ALTREP row names to integer sequence with full ALTREP methods (#2034).
+
+
+# duckdb 1.4.4
+
+## Features
+
+- Update to DuckDB v1.4.4, see <https://github.com/duckdb/duckdb/releases/tag/v1.4.4> for details.
+
+- Add operator expressions (@toppyy, #1828).
+
+## Chore
+
+- Bump vendored cpp11 to v0.5.3.
+
+## Documentation
+
+- Add alternative installation method to README (@szarnyasg, #1819).
 
 
 # duckdb 1.4.3

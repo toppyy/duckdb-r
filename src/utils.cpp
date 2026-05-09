@@ -5,6 +5,10 @@
 #include "rapi.hpp"
 #include "typesr.hpp"
 
+// Avoid clash with TRUE and FALSE macros in older rtools
+#undef TRUE
+#undef FALSE
+
 using namespace duckdb;
 
 [[cpp11::register]] SEXP rapi_adbc_init_func() {
@@ -53,18 +57,19 @@ RStrings::RStrings() {
 	R_PreserveObject(strings);
 	MARK_NOT_MUTABLE(strings);
 
-	cpp11::sexp chars = Rf_allocVector(VECSXP, 11);
+	cpp11::sexp chars = Rf_allocVector(VECSXP, 12);
 	SET_VECTOR_ELT(chars, 0, UTC_str = Rf_mkString("UTC"));
 	SET_VECTOR_ELT(chars, 1, Date_str = Rf_mkString("Date"));
 	SET_VECTOR_ELT(chars, 2, difftime_str = Rf_mkString("difftime"));
 	SET_VECTOR_ELT(chars, 3, secs_str = Rf_mkString("secs"));
 	SET_VECTOR_ELT(chars, 4, arrow_str = Rf_mkString("arrow"));
-	SET_VECTOR_ELT(chars, 5, duckdb_str = Rf_mkString("duckdb"));
+	SET_VECTOR_ELT(chars, 5, duckdb_str = Rf_mkString(DUCKDB_PACKAGE_NAME));
 	SET_VECTOR_ELT(chars, 6, POSIXct_POSIXt_str = StringsToSexp({"POSIXct", "POSIXt"}));
 	SET_VECTOR_ELT(chars, 7, factor_str = Rf_mkString("factor"));
 	SET_VECTOR_ELT(chars, 8, dataframe_str = Rf_mkString("data.frame"));
 	SET_VECTOR_ELT(chars, 9, integer64_str = Rf_mkString("integer64"));
 	SET_VECTOR_ELT(chars, 10, tbl_df_tbl_dataframe_str = StringsToSexp({"tbl_df", "tbl", "data.frame"}));
+	SET_VECTOR_ELT(chars, 11, wk_wkb_wk_vctr_str = StringsToSexp({"wk_wkb", "wk_vctr"}));
 
 	R_PreserveObject(chars);
 	MARK_NOT_MUTABLE(chars);
@@ -84,6 +89,7 @@ RStrings::RStrings() {
 	get_progress_display_sym = Rf_install("get_progress_display");
 	duckdb_row_names_sym = Rf_install("duckdb_row_names");
 	duckdb_vector_sym = Rf_install("duckdb_vector");
+	crs_sym = Rf_install("crs");
 }
 
 LogicalType RStringsType::Get() {
@@ -338,7 +344,7 @@ SEXP RApiTypes::ValueToSexp(Value &val, string &timezone_config) {
 // Helper functions to communicate errors via R's stop() function
 [[noreturn]] void rapi_error_with_context(const std::string &context, const std::string &message) {
 	// Look up R function in duckdb namespace
-	static cpp11::function rapi_error = cpp11::package("duckdb")["rapi_error"];
+	static cpp11::function rapi_error = cpp11::package(DUCKDB_PACKAGE_NAME)["rapi_error"];
 	rapi_error(context, message);
 
 	throw InternalException("Unreachable code after rapi_error()");
@@ -351,7 +357,7 @@ SEXP RApiTypes::ValueToSexp(Value &val, string &timezone_config) {
 
 [[noreturn]] void rapi_error_with_context(const std::string &context, const duckdb::ErrorData &error_data) {
 	// Look up R function in duckdb namespace
-	static cpp11::function rapi_error = cpp11::package("duckdb")["rapi_error"];
+	static cpp11::function rapi_error = cpp11::package(DUCKDB_PACKAGE_NAME)["rapi_error"];
 
 	// Extract fields from ErrorData
 	std::string message = error_data.Message();

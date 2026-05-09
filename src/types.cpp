@@ -6,6 +6,10 @@
 #include "rapi.hpp"
 #include "typesr.hpp"
 
+// Avoid clash with TRUE and FALSE macros in older rtools
+#undef TRUE
+#undef FALSE
+
 using namespace duckdb;
 
 RType::RType() : id_(RTypeId::UNKNOWN), size_(0) {
@@ -336,6 +340,7 @@ string RApiTypes::DetectLogicalType(const LogicalType &stype, const char *caller
 	case LogicalTypeId::UUID:
 		return "character";
 	case LogicalTypeId::BLOB:
+	case LogicalTypeId::GEOMETRY:
 		return "raw";
 	case LogicalTypeId::LIST:
 		return "list";

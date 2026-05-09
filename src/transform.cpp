@@ -1,7 +1,12 @@
+#include "duckdb/common/types/geometry_crs.hpp"
 #include "duckdb/common/types/uhugeint.hpp"
 #include "duckdb/common/types/uuid.hpp"
 #include "rapi.hpp"
 #include "typesr.hpp"
+
+// Avoid clash with TRUE and FALSE macros in older rtools
+#undef TRUE
+#undef FALSE
 
 using namespace duckdb;
 
@@ -63,6 +68,7 @@ int duckdb_r_typeof(const LogicalType &type, const string &name, const char *cal
 	case LogicalTypeId::UUID:
 		return STRSXP;
 	case LogicalTypeId::BLOB:
+	case LogicalTypeId::GEOMETRY:
 		return VECSXP;
 	case LogicalTypeId::ENUM:
 		return INTSXP;
@@ -120,11 +126,15 @@ SEXP duckdb_r_allocate(const LogicalType &type, idx_t nrows, const string &name,
 
 // this allows us to set row names on a data frame with an int argument without calling INTPTR on it
 void install_new_attrib(SEXP vec, SEXP name, SEXP val) {
+#if defined(R_VERSION) && R_VERSION >= R_Version(4, 6, 0)
+	Rf_setAttrib(vec, name, val);
+#else
 	Rf_setAttrib(vec, name, R_NilValue);
 	SEXP attrib_vec = ATTRIB(vec);
 	SEXP attrib_cell = Rf_cons(val, CDR(attrib_vec));
 	SET_TAG(attrib_cell, name);
 	SETCDR(attrib_vec, attrib_cell);
+#endif
 }
 
 void duckdb_r_df_decorate_impl(SEXP dest, SEXP rownames, SEXP class_) {
@@ -205,6 +215,15 @@ void duckdb_r_decorate(const LogicalType &type, const SEXP dest, const duckdb::C
 	case LogicalTypeId::LIST:
 	case LogicalTypeId::MAP:
 		break; // no extra decoration required, do nothing
+	case LogicalTypeId::GEOMETRY:
+		if (convert_opts.geometry == ConvertOpts::GeometryConversion::WK) {
+			SET_CLASS(dest, RStrings::get().wk_wkb_wk_vctr_str);
+			if (GeoType::HasCRS(type)) {
+				auto &crs = GeoType::GetCRS(type);
+				Rf_setAttrib(dest, RStrings::get().crs_sym, Rf_mkString(crs.GetDefinition().c_str()));
+			}
+		}
+		break;
 	case LogicalTypeId::ARRAY: {
 		auto array_size = ArrayType::GetSize(type);
 		auto &child_type = ArrayType::GetChildType(type);
@@ -637,7 +656,8 @@ void duckdb_r_transform(const Vector &src_vec, const SEXP dest, idx_t dest_offse
 		break;
 	}
 
-	case LogicalTypeId::BLOB: {
+	case LogicalTypeId::BLOB:
+	case LogicalTypeId::GEOMETRY: {
 		auto src_ptr = FlatVector::GetData<string_t>(src_vec);
 		auto &mask = FlatVector::Validity(src_vec);
 		for (size_t row_idx = 0; row_idx < n; row_idx++) {

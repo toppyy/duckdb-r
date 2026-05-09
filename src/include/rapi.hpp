@@ -1,5 +1,9 @@
 #pragma once
 
+// Avoid clash with TRUE and FALSE macros in older rtools
+#undef TRUE
+#undef FALSE
+
 #include "cpp11.hpp"
 
 #include <Rdefines.h>
@@ -15,9 +19,15 @@
 
 #include "convert.hpp"
 
+// Avoid clash with TRUE and FALSE macros in older rtools
+#undef TRUE
+#undef FALSE
+
 #if defined(R_VERSION) && R_VERSION >= R_Version(4, 3, 0)
 #define R_HAS_ALTLIST
 #endif
+
+#define DUCKDB_PACKAGE_NAME "duckdb"
 
 // Helper functions to communicate errors via R's stop() function with context information
 [[noreturn]] void rapi_error_with_context(const std::string &context, const std::string &message);
@@ -184,6 +194,7 @@ struct RStrings {
 	SEXP POSIXct_POSIXt_str;
 	SEXP integer64_str;
 	SEXP tbl_df_tbl_dataframe_str;
+	SEXP wk_wkb_wk_vctr_str;
 	SEXP enc2utf8_sym; // Rf_install
 	SEXP tzone_sym;
 	SEXP units_sym;
@@ -198,6 +209,7 @@ struct RStrings {
 	SEXP get_progress_display_sym;
 	SEXP duckdb_row_names_sym;
 	SEXP duckdb_vector_sym;
+	SEXP crs_sym;
 
 	static const RStrings &get() {
 		// On demand
